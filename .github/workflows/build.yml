@@ -20,78 +20,32 @@ jobs:
     
     - name: Install dependencies
       run: |
-        echo "🔄 安装Python依赖..."
         python -m pip install --upgrade pip
-        pip install pyinstaller==5.13.2
-        pip install pandas==2.1.4
-        pip install requests==2.31.0
-        pip install openpyxl==3.1.2
-        echo "✅ 依赖安装完成"
-        pip list
+        pip install pyinstaller==5.13.2 pandas==2.1.4 requests==2.31.0 openpyxl==3.1.2
     
-    - name: Build single-file executable
+    - name: Build executable
+      run: pyinstaller --onefile --windowed --name "AI清洗工具2.0" mac_ai_cleaner.py
+    
+    - name: Create app bundle structure
       run: |
-        echo "🔄 开始构建单文件可执行程序..."
-        pyinstaller --onefile --windowed --name "AI清洗工具2.0" mac_ai_cleaner.py
-        echo "✅ 构建完成"
-        ls -la dist/
+        mkdir -p "AI清洗工具2.0.app/Contents/MacOS"
+        mkdir -p "AI清洗工具2.0.app/Contents/Resources"
+        cp dist/AI清洗工具2.0 "AI清洗工具2.0.app/Contents/MacOS/"
     
-    - name: Create macOS app bundle using Python
+    - name: Create minimal Info.plist
       run: |
-        echo "🔄 使用Python创建macOS应用包..."
-        python << 'PYTHON_SCRIPT'
-        import os
-        import shutil
-        
-        app_name = "AI清洗工具2.0.app"
-        exe_name = "AI清洗工具2.0"
-        
-        # 创建目录结构
-        os.makedirs(f"{app_name}/Contents/MacOS", exist_ok=True)
-        os.makedirs(f"{app_name}/Contents/Resources", exist_ok=True)
-        
-        # 复制可执行文件
-        shutil.copy(f"dist/{exe_name}", f"{app_name}/Contents/MacOS/{exe_name}")
-        
-        # 创建Info.plist内容
-        plist_content = """<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleName</key>
-    <string>AI清洗工具2.0</string>
-    <key>CFBundleDisplayName</key>
-    <string>AI清洗工具2.0</string>
-    <key>CFBundleVersion</key>
-    <string>2.0.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>2.0.0</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.ai.cleaner</string>
-    <key>NSHumanReadableCopyright</key>
-    <string>© 2024 AI清洗工具</string>
-    <key>CFBundleExecutable</key>
-    <string>AI清洗工具2.0</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleSignature</key>
-    <string>????</string>
-</dict>
-</plist>"""
-        
-        # 写入Info.plist文件
-        with open(f"{app_name}/Contents/Info.plist", "w", encoding="utf-8") as f:
-            f.write(plist_content)
-            
-        print("✅ 应用包创建完成")
-        PYTHON_SCRIPT
-        echo "📁 应用结构："
-        ls -la "AI清洗工具2.0.app/Contents/"
+        # 使用简单的命令创建Info.plist，避免YAML多行问题
+        echo '<?xml version="1.0" encoding="UTF-8"?>' > "AI清洗工具2.0.app/Contents/Info.plist"
+        echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "AI清洗工具2.0.app/Contents/Info.plist"
+        echo '<plist version="1.0"><dict>' >> "AI清洗工具2.0.app/Contents/Info.plist"
+        echo '<key>CFBundleName</key><string>AI清洗工具2.0</string>' >> "AI清洗工具2.0.app/Contents/Info.plist"
+        echo '<key>CFBundleExecutable</key><string>AI清洗工具2.0</string>' >> "AI清洗工具2.0.app/Contents/Info.plist"
+        echo '<key>CFBundlePackageType</key><string>APPL</string>' >> "AI清洗工具2.0.app/Contents/Info.plist"
+        echo '</dict></plist>' >> "AI清洗工具2.0.app/Contents/Info.plist"
     
-    - name: Upload macOS app artifact
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: AI-Cleaner-macOS-App
         path: AI清洗工具2.0.app
         retention-days: 90
-        if-no-files-found: error
