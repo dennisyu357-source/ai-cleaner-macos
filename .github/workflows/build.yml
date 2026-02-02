@@ -10,10 +10,10 @@ jobs:
     runs-on: macos-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.12'
         cache: 'pip'
@@ -22,14 +22,18 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install py2app pandas requests openpyxl
+        echo "✅ 依赖安装完成"
     
     - name: Build macOS app
       run: |
         python setup.py py2app
+        echo "✅ 应用构建完成"
+        ls -la dist/
     
     - name: Upload macOS app artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: AI-Cleaner-macOS-App
         path: dist/AI清洗工具2.0.app
         retention-days: 90
+        if-no-files-found: error
