@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 jobs:
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-13  # 使用更稳定的macOS 13
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -15,25 +15,70 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
-        cache: 'pip'
+        python-version: '3.11'  # 使用更稳定的Python 3.11
+        cache: false
     
     - name: Install dependencies
       run: |
+        echo "🔄 安装Python依赖..."
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install pyinstaller==5.13.2
+        pip install pandas==2.1.4
+        pip install requests==2.31.0
+        pip install openpyxl==3.1.2
         echo "✅ 依赖安装完成"
+        pip list
     
-    - name: Build macOS app
+    - name: Build single-file executable
       run: |
-        python setup.py py2app
-        echo "✅ 应用构建完成"
+        echo "🔄 开始构建单文件可执行程序..."
+        pyinstaller --onefile --windowed --name "AI清洗工具2.0" mac_ai_cleaner.py
+        echo "✅ 构建完成"
         ls -la dist/
+    
+    - name: Create macOS app bundle
+      run: |
+        echo "🔄 创建macOS应用包..."
+        mkdir -p "AI清洗工具2.0.app/Contents/MacOS"
+        mkdir -p "AI清洗工具2.0.app/Contents/Resources"
+        
+        # 复制可执行文件
+        cp dist/AI清洗工具2.0 "AI清洗工具2.0.app/Contents/MacOS/"
+        
+        # 创建Info.plist
+        cat > "AI清洗工具2.0.app/Contents/Info.plist" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>AI清洗工具2.0</string>
+    <key>CFBundleDisplayName</key>
+    <string>AI清洗工具2.0</string>
+    <key>CFBundleVersion</key>
+    <string>2.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>2.0.0</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.ai.cleaner</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2024 AI清洗工具</string>
+    <key>CFBundleExecutable</key>
+    <string>AI清洗工具2.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+</dict>
+</plist>
+EOF
+        echo "✅ 应用包创建完成"
+        ls -la "AI清洗工具2.0.app/Contents/"
     
     - name: Upload macOS app artifact
       uses: actions/upload-artifact@v4
       with:
         name: AI-Cleaner-macOS-App
-        path: dist/AI清洗工具2.0.app
+        path: AI清洗工具2.0.app
         retention-days: 90
         if-no-files-found: error
