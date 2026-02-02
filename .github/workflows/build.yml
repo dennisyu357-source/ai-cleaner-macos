@@ -1,50 +1,41 @@
 name: Build AI Cleaner for macOS
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 jobs:
   build-macos:
-    runs-on: macos-latest  # Apple Silicon环境
+    runs-on: macos-15-intel
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-        cache: false
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller==6.10.0 pandas==2.2.3 requests==2.32.3 openpyxl==3.1.5
-    
-    - name: Build executable
-      run: pyinstaller --onefile --windowed --name "AI清洗工具2.0" mac_ai_cleaner.py
-    
-    - name: Create app bundle
-      run: |
-        mkdir -p "AI清洗工具2.0.app/Contents/MacOS"
-        cp dist/AI清洗工具2.0 "AI清洗工具2.0.app/Contents/MacOS/"
-        cat > "AI清洗工具2.0.app/Contents/Info.plist" << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleName</key><string>AI清洗工具2.0</string>
-    <key>CFBundleExecutable</key><string>AI清洗工具2.0</string>
-    <key>CFBundlePackageType</key><string>APPL</string>
-</dict>
-</plist>
-EOF
-    
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: AI-Cleaner-macOS-App
-        path: AI清洗工具2.0.app
-        retention-days: 90
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: false
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller==6.10.0
+          pip install pandas==2.2.3
+          pip install requests==2.32.3
+          pip install openpyxl==3.1.5
+      
+      - name: Build executable
+        run: pyinstaller --onefile --windowed --name "AI清洗工具2.0" mac_ai_cleaner.py
+      
+      - name: Create app bundle
+        run: python app_builder.py
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AI-Cleaner-macOS-App
+          path: AI清洗工具2.0.app
+          retention-days: 90
