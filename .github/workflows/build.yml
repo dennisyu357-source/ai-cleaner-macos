@@ -16,8 +16,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
-        # 修复：禁用pip缓存，避免寻找requirements.txt
-        cache: false
+        cache: 'pip'
     
     - name: Install dependencies
       run: |
