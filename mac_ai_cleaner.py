@@ -11,7 +11,14 @@ import time
 import re
 import concurrent.futures
 import queue
-from datetime import datetime
+# PyInstaller兼容处理
+def resource_path(relative_path):
+    """获取资源路径，兼容PyInstaller打包"""
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 class MacAICleaner:
     def __init__(self, root):
         self.root = root
@@ -24,10 +31,8 @@ class MacAICleaner:
         
         # 配置设置
         self.config = configparser.ConfigParser(interpolation=None)
-        self.config_file = os.path.join(os.path.expanduser("~/.config"), "ai_cleaner_config.ini")
-        
-        # 确保配置目录存在
-        os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+        # 配置文件保存在用户文档目录
+        self.config_file = os.path.join(os.path.expanduser("~/Documents"), "ai_cleaner_config.ini")
         
         # 加载配置
         self.load_config()
@@ -63,7 +68,7 @@ class MacAICleaner:
             self.generate_default_config()
     
     def generate_default_config(self):
-        """生成默认配置（动态字段示例提示词）"""
+        """生成默认配置"""
         dynamic_prompt = """
 ### 动态字段清洗规则（根据此提示词自动提取字段）
 请作为专业数据分析师，按照以下规则处理数据：
@@ -96,8 +101,8 @@ class MacAICleaner:
             "prompt": dynamic_prompt.strip(),
             "input_file": "",
             "output_file": "",
-            "batch_size": "5",  # 批量处理大小
-            "max_workers": "4"  # 最大线程数
+            "batch_size": "5",
+            "max_workers": "4"
         }
         self.save_config()
     
@@ -107,8 +112,7 @@ class MacAICleaner:
             self.config.write(f)
     
     def create_widgets(self):
-        """创建界面 - macOS风格"""
-        # 主容器
+        """创建界面"""
         main_frame = ttk.Frame(self.root, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
@@ -159,7 +163,6 @@ class MacAICleaner:
         file_frame = ttk.LabelFrame(main_frame, text="文件配置", padding="10")
         file_frame.pack(fill=tk.X, pady=(0, 15))
         
-        # 输入文件
         input_frame = ttk.Frame(file_frame)
         input_frame.pack(fill=tk.X, pady=(0, 5))
         ttk.Label(input_frame, text="输入文件:").pack(side=tk.LEFT)
@@ -169,7 +172,6 @@ class MacAICleaner:
         input_btn = ttk.Button(input_frame, text="浏览", command=self.select_input_file)
         input_btn.pack(side=tk.RIGHT)
         
-        # 输出文件
         output_frame = ttk.Frame(file_frame)
         output_frame.pack(fill=tk.X)
         ttk.Label(output_frame, text="输出文件:").pack(side=tk.LEFT)
@@ -183,7 +185,7 @@ class MacAICleaner:
         action_frame = ttk.Frame(main_frame)
         action_frame.pack(fill=tk.X, pady=(0, 15))
         
-        self.start_btn = ttk.Button(action_frame, text="开始清洗", command=self.start_processing, style='Accent.TButton')
+        self.start_btn = ttk.Button(action_frame, text="开始清洗", command=self.start_processing)
         self.start_btn.pack(side=tk.LEFT)
         
         self.stop_save_btn = ttk.Button(action_frame, text="停止并保存", command=self.stop_and_save, state=tk.DISABLED)
@@ -202,24 +204,8 @@ class MacAICleaner:
         
         # 进度条
         self.progress_var = tk.DoubleVar()
-        self.progress_bar = ttk.Progressbar(main_frame, variable=self.progress_var, maximum=100, style='Hori.TProgressbar')
+        self.progress_bar = ttk.Progressbar(main_frame, variable=self.progress_var, maximum=100)
         self.progress_bar.pack(fill=tk.X, pady=(0, 15))
-        
-        # macOS风格设置
-        self.style = ttk.Style()
-        self.style.theme_use('clam')  # 使用clam主题更接近macOS风格
-        
-        # 自定义样式
-        self.style.configure('Accent.TButton', 
-                            background='#007aff', 
-                            foreground='white',
-                            padding=(10, 5))
-        self.style.map('Accent.TButton',
-                       background=[('active', '#0056cc')])
-        
-        self.style.configure('Hori.TProgressbar',
-                            troughcolor='#e0e0e0',
-                            background='#007aff')
         
         # 初始化字段预览
         self.update_field_preview()
@@ -254,7 +240,7 @@ class MacAICleaner:
         return re.sub(r'[^\w\u4e00-\u9fa5]', '', field).strip()
     
     def select_input_file(self):
-        """选择输入文件 - macOS优化"""
+        """选择输入文件"""
         file_path = filedialog.askopenfilename(
             filetypes=[("Excel文件", "*.xlsx;*.xls"), ("所有文件", "*.*")],
             initialdir=os.path.expanduser("~"),
@@ -267,7 +253,7 @@ class MacAICleaner:
             self.save_config()
     
     def select_output_file(self):
-        """选择输出文件 - macOS优化"""
+        """选择输出文件"""
         file_path = filedialog.asksaveasfilename(
             defaultextension=".xlsx",
             filetypes=[("Excel文件", "*.xlsx"), ("所有文件", "*.*")],
@@ -348,7 +334,7 @@ class MacAICleaner:
         self.stop_no_save_btn.config(state=tk.DISABLED)
     
     def save_excel_file(self, output_file):
-        """保存Excel文件 - macOS优化"""
+        """保存Excel文件"""
         try:
             df_to_save = self.df.copy()
             df_to_save = df_to_save.fillna("")
@@ -376,9 +362,8 @@ class MacAICleaner:
                 break
     
     def process_data(self, input_file, output_file):
-        """处理数据（提速版）"""
+        """处理数据"""
         try:
-            # 读取原始数据
             self.df = pd.read_excel(input_file, engine='openpyxl')
             original_columns = self.df.columns.tolist()
             total_rows = len(self.df)
@@ -386,16 +371,16 @@ class MacAICleaner:
             self.progress_queue.put(("status", f"✅ 读取原始数据成功，共{total_rows}行\n"))
             self.progress_queue.put(("status", f"📋 动态提取字段：{self.fields}（共{len(self.fields)}个）\n"))
             
-            # 添加新字段到DataFrame
+            # 添加新字段
             for field in self.fields:
                 if field not in self.df.columns:
                     self.df[field] = ""
             
-            # 立即保存初始状态
+            # 保存初始状态
             if self.save_excel_file(output_file):
                 self.progress_queue.put(("status", f"💾 已保存初始状态到：{output_file}\n"))
             
-            # 获取配置参数
+            # 获取配置
             api_key = self.config["DEFAULT"]["api_key"]
             prompt_template = self.config["DEFAULT"]["prompt"]
             batch_size = int(self.config["DEFAULT"]["batch_size"])
@@ -403,63 +388,55 @@ class MacAICleaner:
             
             self.progress_queue.put(("status", f"⚡ 提速配置：批量大小={batch_size}，线程数={max_workers}\n"))
             
-            # 批量处理数据
+            # 批量处理
             start_time = time.time()
             
-            # 创建线程池
-            self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
-            
-            # 分批处理数据
-            for batch_start in range(0, total_rows, batch_size):
-                if not self.processing:
-                    break
-                
-                batch_end = min(batch_start + batch_size, total_rows)
-                batch_indices = list(range(batch_start, batch_end))
-                
-                self.progress_queue.put(("status", f"\n📦 处理批次 {batch_start//batch_size + 1}（行 {batch_start+1}-{batch_end}）...\n"))
-                
-                # 提交批量任务到线程池
-                batch_futures = []
-                for idx in batch_indices:
-                    future = self.executor.submit(
-                        self.process_single_row,
-                        idx, self.df.iloc[idx], api_key, prompt_template, original_columns
-                    )
-                    batch_futures.append((idx, future))
-                
-                # 等待批次完成
-                for idx, future in batch_futures:
-                    try:
-                        result = future.result(timeout=30)
-                        if result:
-                            # 处理所有返回的字段
-                            if isinstance(result, dict):
-                                self.progress_queue.put(("status", f"   行 {idx+1}: 成功提取 {len(result)} 个字段\n"))
-                                for field, value in result.items():
-                                    self.df.at[idx, field] = value
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as self.executor:
+                for batch_start in range(0, total_rows, batch_size):
+                    if not self.processing:
+                        break
+                    
+                    batch_end = min(batch_start + batch_size, total_rows)
+                    batch_indices = list(range(batch_start, batch_end))
+                    
+                    self.progress_queue.put(("status", f"\n📦 处理批次 {batch_start//batch_size + 1}（行 {batch_start+1}-{batch_end}）...\n"))
+                    
+                    # 提交任务
+                    batch_futures = []
+                    for idx in batch_indices:
+                        future = self.executor.submit(
+                            self.process_single_row,
+                            idx, self.df.iloc[idx], api_key, prompt_template, original_columns
+                        )
+                        batch_futures.append((idx, future))
+                    
+                    # 收集结果
+                    for idx, future in batch_futures:
+                        try:
+                            result = future.result(timeout=30)
+                            if result:
+                                if isinstance(result, dict):
+                                    self.progress_queue.put(("status", f"   行 {idx+1}: 成功提取 {len(result)} 个字段\n"))
+                                    for field, value in result.items():
+                                        self.df.at[idx, field] = value
+                                else:
+                                    self.progress_queue.put(("status", f"   行 {idx+1}: 提取结果格式错误\n"))
                             else:
-                                self.progress_queue.put(("status", f"   行 {idx+1}: 提取结果格式错误\n"))
-                        else:
-                            self.progress_queue.put(("status", f"   行 {idx+1}: 未提取到任何字段\n"))
-                    except concurrent.futures.TimeoutError:
-                        self.progress_queue.put(("status", f"❌ 行 {idx+1} 处理超时\n"))
-                    except Exception as e:
-                        self.progress_queue.put(("status", f"❌ 行 {idx+1} 处理错误：{str(e)}\n"))
-                
-                # 更新进度条
-                progress = (batch_end / total_rows) * 100
-                self.progress_queue.put(("progress", progress))
-                
-                # 每批处理完成后保存
-                if self.save_excel_file(output_file):
-                    self.progress_queue.put(("status", f"💾 批次完成，已保存进度\n"))
+                                self.progress_queue.put(("status", f"   行 {idx+1}: 未提取到任何字段\n"))
+                        except concurrent.futures.TimeoutError:
+                            self.progress_queue.put(("status", f"❌ 行 {idx+1} 处理超时\n"))
+                        except Exception as e:
+                            self.progress_queue.put(("status", f"❌ 行 {idx+1} 处理错误：{str(e)}\n"))
+                    
+                    # 更新进度
+                    progress = (batch_end / total_rows) * 100
+                    self.progress_queue.put(("progress", progress))
+                    
+                    # 保存进度
+                    if self.save_excel_file(output_file):
+                        self.progress_queue.put(("status", f"💾 批次完成，已保存进度\n"))
             
-            # 关闭线程池
-            if self.executor:
-                self.executor.shutdown(wait=True)
-            
-            # 计算总耗时
+            # 计算耗时
             total_time = time.time() - start_time
             avg_time_per_row = total_time / total_rows if total_rows > 0 else 0
             
@@ -485,23 +462,18 @@ class MacAICleaner:
     def process_single_row(self, idx, row, api_key, prompt_template, original_columns):
         """处理单行数据"""
         try:
-            # 构建提示词
             row_data = "\n".join([f"{col}: {row[col]}" for col in original_columns])
             current_prompt = prompt_template + "\n当前数据：\n" + row_data + "\n请严格按照要求输出结果："
             
-            # 调用API
             result = self.call_ai_api(api_key, current_prompt)
             
-            # 解析结果
             field_values = {}
-            
             lines = result.strip().split('\n')
             for line in lines:
                 line = line.strip()
                 if not line:
                     continue
                 
-                # 处理分隔符
                 if ':' in line:
                     field, value = line.split(':', 1)
                 elif '：' in line:
@@ -523,7 +495,7 @@ class MacAICleaner:
             return {}
     
     def call_ai_api(self, api_key, prompt):
-        """调用DeepSeek API"""
+        """调用API"""
         url = "https://api.deepseek.com/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
