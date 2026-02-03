@@ -1,4 +1,4 @@
-name: Build AI Cleaner for macOS
+name: Build AI Cleaner Cross Platform
 on:
   push:
     branches: [main, master]
@@ -8,7 +8,6 @@ on:
 jobs:
   build-macos:
     runs-on: macos-15-intel
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,15 +25,103 @@ jobs:
           pip install requests==2.32.3
           pip install openpyxl==3.1.5
       
-      - name: Build executable
-        run: pyinstaller --onefile --windowed --name "AI清洗工具2.0" mac_ai_cleaner.py
+      - name: Build macOS executable
+        run: |
+          echo "🔄 构建macOS可执行文件..."
+          pyinstaller --onefile --windowed --name "AI清洗工具2.0" mac_ai_cleaner.py
+          echo "✅ 构建完成"
       
-      - name: Create app bundle
-        run: python app_builder.py
+      - name: Create macOS app bundle
+        run: |
+          echo "🔄 创建macOS应用包..."
+          mkdir -p "AI清洗工具2.0.app/Contents/MacOS"
+          mkdir -p "AI清洗工具2.0.app/Contents/Resources"
+          cp dist/AI清洗工具2.0 "AI清洗工具2.0.app/Contents/MacOS/"
+          
+          # 创建Info.plist
+          cat > "AI清洗工具2.0.app/Contents/Info.plist" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>AI清洗工具2.0</string>
+    <key>CFBundleDisplayName</key>
+    <string>AI清洗工具2.0</string>
+    <key>CFBundleVersion</key>
+    <string>2.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>2.0.0</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.ai.cleaner</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2024 AI清洗工具</string>
+    <key>CFBundleExecutable</key>
+    <string>AI清洗工具2.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>LSArchitecturePriority</key>
+    <array>
+        <string>arm64</string>
+        <string>x86_64</string>
+    </array>
+</dict>
+</plist>
+EOF
+          echo "✅ 应用包创建完成"
       
-      - name: Upload artifact
+      - name: Fix macOS app permissions and signature
+        run: |
+          echo "🔄 修复应用权限和签名..."
+          # 移除所有扩展属性（包括隔离属性）
+          xattr -cr "AI清洗工具2.0.app"
+          # 设置正确的文件权限
+          chmod -R 755 "AI清洗工具2.0.app"
+          # 为可执行文件设置执行权限
+          chmod +x "AI清洗工具2.0.app/Contents/MacOS/AI清洗工具2.0"
+          # 添加临时签名
+          codesign --force --deep --sign - "AI清洗工具2.0.app"
+          # 验证签名
+          codesign -dvvv "AI清洗工具2.0.app" 2>&1 | grep -E "(Authority|Identifier)" || true
+          echo "✅ 应用权限和签名修复完成"
+      
+      - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: AI-Cleaner-macOS-App
           path: AI清洗工具2.0.app
+          retention-days: 90
+  
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller==6.10.0
+          pip install pandas==2.2.3
+          pip install requests==2.32.3
+          pip install openpyxl==3.1.5
+      
+      - name: Build Windows executable
+        run: |
+          echo "🔄 构建Windows可执行文件..."
+          pyinstaller --onefile --windowed --name "AI清洗工具2.0-Windows" mac_ai_cleaner.py
+          echo "✅ 构建完成"
+      
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AI-Cleaner-Windows-EXE
+          path: dist/AI清洗工具2.0-Windows.exe
           retention-days: 90
