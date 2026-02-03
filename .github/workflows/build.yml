@@ -31,46 +31,53 @@ jobs:
           pyinstaller --onefile --windowed --name "AI清洗工具2.0" mac_ai_cleaner.py
           echo "✅ 构建完成"
       
-      - name: Create macOS app bundle
+      - name: Create macOS app bundle structure
         run: |
-          echo "🔄 创建macOS应用包..."
+          echo "🔄 创建macOS应用包结构..."
           mkdir -p "AI清洗工具2.0.app/Contents/MacOS"
           mkdir -p "AI清洗工具2.0.app/Contents/Resources"
           cp dist/AI清洗工具2.0 "AI清洗工具2.0.app/Contents/MacOS/"
+          echo "✅ 应用包结构创建完成"
+      
+      - name: Create Info.plist using Python
+        run: |
+          echo "🔄 创建Info.plist文件..."
+          python3 - << 'EOF'
+          import os
+          plist_content = '''<?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleName</key>
+              <string>AI清洗工具2.0</string>
+              <key>CFBundleDisplayName</key>
+              <string>AI清洗工具2.0</string>
+              <key>CFBundleVersion</key>
+              <string>2.0.0</string>
+              <key>CFBundleShortVersionString</key>
+              <string>2.0.0</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.ai.cleaner</string>
+              <key>NSHumanReadableCopyright</key>
+              <string>© 2024 AI清洗工具</string>
+              <key>CFBundleExecutable</key>
+              <string>AI清洗工具2.0</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleSignature</key>
+              <string>????</string>
+              <key>LSArchitecturePriority</key>
+              <array>
+                  <string>arm64</string>
+                  <string>x86_64</string>
+              </array>
+          </dict>
+          </plist>'''
           
-          # 创建Info.plist
-          cat > "AI清洗工具2.0.app/Contents/Info.plist" << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleName</key>
-    <string>AI清洗工具2.0</string>
-    <key>CFBundleDisplayName</key>
-    <string>AI清洗工具2.0</string>
-    <key>CFBundleVersion</key>
-    <string>2.0.0</string>
-    <key>CFBundleShortVersionString</key>
-    <string>2.0.0</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.ai.cleaner</string>
-    <key>NSHumanReadableCopyright</key>
-    <string>© 2024 AI清洗工具</string>
-    <key>CFBundleExecutable</key>
-    <string>AI清洗工具2.0</string>
-    <key>CFBundlePackageType</key>
-    <string>APPL</string>
-    <key>CFBundleSignature</key>
-    <string>????</string>
-    <key>LSArchitecturePriority</key>
-    <array>
-        <string>arm64</string>
-        <string>x86_64</string>
-    </array>
-</dict>
-</plist>
-EOF
-          echo "✅ 应用包创建完成"
+          with open("AI清洗工具2.0.app/Contents/Info.plist", "w", encoding="utf-8") as f:
+              f.write(plist_content)
+          print("✅ Info.plist文件创建完成")
+          EOF
       
       - name: Fix macOS app permissions and signature
         run: |
