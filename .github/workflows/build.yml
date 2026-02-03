@@ -26,7 +26,66 @@ jobs:
           pip install openpyxl==3.1.5
       
       - name: Build macOS app
-        run: python build_mac_app.py
+        run: |
+          echo "🔄 构建macOS应用..."
+          
+          # 构建可执行文件
+          pyinstaller --onefile --windowed --name "AI清洗工具2.0" mac_ai_cleaner.py
+          
+          # 创建app包结构
+          mkdir -p "AI清洗工具2.0.app/Contents/MacOS"
+          mkdir -p "AI清洗工具2.0.app/Contents/Resources"
+          cp dist/AI清洗工具2.0 "AI清洗工具2.0.app/Contents/MacOS/"
+          
+          # 创建Info.plist
+          cat > "AI清洗工具2.0.app/Contents/Info.plist" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>AI清洗工具2.0</string>
+    <key>CFBundleDisplayName</key>
+    <string>AI清洗工具2.0</string>
+    <key>CFBundleVersion</key>
+    <string>2.0.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>2.0.0</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.ai.cleaner</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2024 AI清洗工具</string>
+    <key>CFBundleExecutable</key>
+    <string>AI清洗工具2.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>LSArchitecturePriority</key>
+    <array>
+        <string>arm64</string>
+        <string>x86_64</string>
+    </array>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15.0</string>
+</dict>
+</plist>
+EOF
+          
+          # 设置权限
+          chmod -R 755 "AI清洗工具2.0.app"
+          chmod +x "AI清洗工具2.0.app/Contents/MacOS/AI清洗工具2.0"
+          
+          # 移除隔离属性
+          xattr -cr "AI清洗工具2.0.app"
+          
+          # 添加临时签名
+          codesign --force --deep --sign - "AI清洗工具2.0.app"
+          
+          # 验证签名
+          codesign -dvvv "AI清洗工具2.0.app" 2>&1 | head -10
+          
+          echo "✅ 应用构建完成"
       
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
